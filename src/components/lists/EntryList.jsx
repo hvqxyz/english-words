@@ -16,16 +16,19 @@ const DEFAULT_VISIBLE_ITEMS = 3;
  * icon buttons rendered before edit/remove, for row actions specific to one
  * page (e.g. WordsPage's "pronounce this word").
  * itemLabel: plural noun shown in the "Show N more ___" toggle (default "item").
+ * expandable: set false to always render every item with no "Show N more"/
+ * "Show less" toggle — for callers (e.g. WordsPage) that already cap how
+ * many items they pass in, so a second round of hiding is just confusing.
  */
-export function EntryList({ items, itemLabel = "item" }) {
+export function EntryList({ items, itemLabel = "item", expandable = true }) {
     const [expanded, setExpanded] = useState(false);
     const [openKeys, setOpenKeys] = useState(new Set());
 
-    const visibleItems = expanded
+    const visibleItems = !expandable || expanded
         ? items
         : items.slice(0, DEFAULT_VISIBLE_ITEMS);
 
-    const hiddenCount = items.length - DEFAULT_VISIBLE_ITEMS;
+    const hiddenCount = expandable ? items.length - DEFAULT_VISIBLE_ITEMS : 0;
 
     function toggleOpen(key) {
         setOpenKeys((prev) => {

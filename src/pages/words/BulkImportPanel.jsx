@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { getWords, addWords } from '../../common/storage.js';
 import { parseImportText, markDuplicates } from '../../common/import-parser.js';
-import { Modal } from '../../components/Modal.jsx';
 import { Button } from '../../components/buttons/Button.jsx';
 import { TextArea } from '../../components/inputs/TextArea.jsx';
 import { Select } from '../../components/inputs/Select.jsx';
@@ -65,12 +64,13 @@ function recomputeStatuses(rows, existingWords) {
 }
 
 /**
- * Paste-and-validate bulk import: step 1 takes freeform pasted text, step 2
- * shows what was parsed out of it — word, translation, and definition are
- * all editable there, so a line that failed to parse (e.g. no translation
- * found) can be filled in by hand instead of being skipped.
+ * Inline "bulk import" panel (no modal) — mounted only while active, so its
+ * state naturally resets each time it's opened. Step 1 takes freeform pasted
+ * text, step 2 shows what was parsed out of it — word, translation, and
+ * definition are all editable there, so a line that failed to parse (e.g. no
+ * translation found) can be filled in by hand instead of being skipped.
  */
-export function ImportWordsModal({ open, categories, onClose, onSaved }) {
+export function BulkImportPanel({ categories, onClose, onSaved }) {
   const [step, setStep] = useState('paste');
   const [rawText, setRawText] = useState('');
   const [defaultCategory, setDefaultCategory] = useState('');
@@ -80,20 +80,6 @@ export function ImportWordsModal({ open, categories, onClose, onSaved }) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
   const [message, setMessage] = useState({ text: '', type: '' });
-
-  function reset() {
-    setStep('paste');
-    setRawText('');
-    setRows([]);
-    setExistingWords([]);
-    setResult(null);
-    setMessage({ text: '', type: '' });
-  }
-
-  function handleClose() {
-    reset();
-    onClose();
-  }
 
   async function handleParse() {
     setParsing(true);
@@ -149,7 +135,7 @@ export function ImportWordsModal({ open, categories, onClose, onSaved }) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} className="import-modal">
+    <div className="add-word-panel">
       {step === 'paste' && (
         <>
           <h3>Import words from text</h3>
@@ -173,7 +159,7 @@ export function ImportWordsModal({ open, categories, onClose, onSaved }) {
           {message.text && <p className={`message ${message.type}`.trim()} role="status">{message.text}</p>}
           <div className="app-modal-actions">
             <Button disabled={!rawText.trim() || parsing} onClick={handleParse}>Check words</Button>
-            <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
+            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           </div>
         </>
       )}
@@ -273,10 +259,10 @@ export function ImportWordsModal({ open, categories, onClose, onSaved }) {
             {result.failed > 0 && ` ${result.failed} failed to save — try again from the Words list.`}
           </p>
           <div className="app-modal-actions">
-            <Button onClick={handleClose}>Done</Button>
+            <Button onClick={onClose}>Done</Button>
           </div>
         </>
       )}
-    </Modal>
+    </div>
   );
 }

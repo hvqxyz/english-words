@@ -249,6 +249,18 @@ label {
   grid-column: 1 / -1;
 }
 
+/* Inline "Add a word" panel (AddWordPanel) — expands below its toggle button
+   inside the Words card, so a border-top reads as "attached to" that row
+   rather than a whole separate block. */
+.add-word-panel {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--gridline);
+}
+
+.add-word-panel h3 {
+  margin: 0 0 0.5rem;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -432,10 +444,19 @@ tfoot th {
   background: var(--accent);
 }
 
-/* Import-words modal (paste text → validated preview table). */
+/*
+ * Import-words modal (paste text → validated preview table). `display` is
+ * scoped to [open] so this dialog stays hidden (the browser's default
+ * `dialog:not([open]) { display: none }`) until Modal.jsx actually opens it
+ * — an unconditional `display` here would win the cascade over that UA rule
+ * and leave the dialog visible/in-flow even when closed.
+ */
 .import-modal {
   width: min(640px, 92vw);
   max-height: 85vh;
+}
+
+.import-modal[open] {
   display: flex;
   flex-direction: column;
 }
