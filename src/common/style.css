@@ -1,0 +1,493 @@
+:root {
+  --surface: #fcfcfb;
+  --page: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --muted: #898781;
+  --gridline: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.1);
+  --accent: rgb(54 130 224 / 0.71);
+  --good: #199e70;
+  --critical: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --gridline: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.1);
+    --accent: #3987e5;
+    --good: #199e70;
+    --critical: #e66767;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  padding-bottom: 2rem;
+}
+
+.card-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.column {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.info-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+/*
+ * Base look for every <button> in the app. Declared early, before any
+ * component-specific button class (.tab-btn, .range-btn, etc.) so those
+ * classes — which share the same single-class specificity — win the
+ * cascade tie-break by simply appearing later, without needing !important
+ * or extra specificity.
+ */
+
+.button:active {
+  opacity: 0.85;
+}
+
+.app-header {
+  padding: 1rem 1rem 1rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 auto;
+  max-width: 640px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.app-button.profile-avatar-link {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+}
+
+.profile-avatar-initial {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stat-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stat-tile-empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.range-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.range-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  flex: 1;
+  min-height: 36px;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--gridline);
+  border-radius: 8px;
+}
+
+.range-btn:hover {
+  background: #3682E0B6;
+}
+
+.range-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 220px;
+}
+
+.form-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b5b5b5;
+  margin-left: 2px;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+}
+
+.button-field {
+  justify-content: flex-end;
+}
+
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.entry-grid input,
+.entry-grid select,
+.entry-grid textarea {
+  width: 100%;
+}
+
+.entry-grid-full {
+  grid-column: 1 / -1;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--gridline);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+td.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+tfoot td,
+tfoot th {
+  font-weight: 600;
+  border-top: 2px solid var(--gridline);
+  border-bottom: none;
+}
+
+.message {
+  min-height: 1.0rem;
+  font-size: 0.75rem;
+  margin: 0.0rem 0 0;
+}
+
+.message.success {
+  color: var(--good);
+}
+
+.message.error {
+  color: var(--critical);
+}
+
+/* Word/category tag pill, used on WordsPage list items and the practice card. */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(54, 130, 224, 0.14);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tag-pill-muted {
+  background: transparent;
+  border: 1px dashed var(--gridline);
+  color: var(--muted);
+}
+
+.tag-pill-good {
+  background: rgba(25, 158, 112, 0.14);
+  color: var(--good);
+}
+
+/* Practice page flashcard. */
+.flashcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 2.25rem 1rem;
+  text-align: center;
+  min-height: 220px;
+  justify-content: center;
+}
+
+.flashcard-meta {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.flashcard-word {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.flashcard-audio-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flashcard-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.flashcard-translation {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.flashcard-definition,
+.flashcard-example {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.flashcard-example {
+  font-style: italic;
+}
+
+.flashcard-progress {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.flashcard-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.flashcard-actions .app-button {
+  flex: 1;
+}
+
+.session-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.session-summary-score {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Stats page category breakdown bars. */
+.category-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.category-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.category-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gridline);
+  overflow: hidden;
+}
+
+.category-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* Import-words modal (paste text → validated preview table). */
+.import-modal {
+  width: min(640px, 92vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.import-textarea {
+  min-height: 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.import-summary {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.import-table-wrap {
+  overflow-y: auto;
+  max-height: 46vh;
+  border: 1px solid var(--gridline);
+  border-radius: 10px;
+}
+
+.import-table-wrap table {
+  font-size: 0.85rem;
+}
+
+.import-table-wrap th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+
+.import-row-invalid {
+  opacity: 0.6;
+}
+
+.import-row-duplicate td:not(:first-child) {
+  color: var(--muted);
+}
+
+.import-cell-input {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+  white-space: normal;
+}
+
+@media (max-width: 560px) {
+  .entry-grid {
+    grid-template-columns: 1fr;
+  }
+}

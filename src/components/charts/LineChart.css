@@ -1,0 +1,29 @@
+:root {
+  --chart-primary: #3b82f6;
+  --chart-grid: rgba(255, 255, 255, 0.04);
+  --chart-axis: #8b8b8b;
+  --chart-average: rgba(255, 255, 255, 0.25);
+
+  --chart-tooltip-bg: #1f1f1f;
+  --chart-tooltip-border: #333;
+
+  --chart-height: 260px;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: var(--chart-height);
+}
+
+@media (max-width: 768px) {
+  .chart-wrap {
+    height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-wrap {
+    height: 190px;
+  }
+}

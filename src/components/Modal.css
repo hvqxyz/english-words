@@ -1,0 +1,38 @@
+.app-modal {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: min(320px, 90vw);
+}
+
+.app-modal::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.app-modal h3 {
+  margin: 0 0 0.75rem;
+}
+
+.app-modal-detail {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.app-modal-detail dt {
+  color: var(--text-secondary);
+}
+
+.app-modal-detail dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.app-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+}
