@@ -6,8 +6,9 @@ import './TagInput.css';
  * Chip-style multi-tag input. Controlled via `value` (array of strings) /
  * `onChange` (receives the new array). Enter or "," commits the current
  * text as a tag; Backspace on an empty field removes the last chip.
- * `suggestions` (e.g. every tag already used elsewhere) drives a filtered
- * autocomplete dropdown while typing.
+ * `suggestions` (e.g. every tag already used elsewhere) drives an
+ * autocomplete dropdown: focusing an empty field lists them as hints to pick
+ * from, and typing narrows the list to matches.
  */
 export function TagInput({ value = [], onChange, suggestions = [], placeholder, id }) {
   const [text, setText] = useState('');
@@ -36,11 +37,8 @@ export function TagInput({ value = [], onChange, suggestions = [], placeholder, 
   }
 
   const query = text.trim().toLowerCase();
-  const matches = query
-    ? suggestions
-      .filter((s) => s.toLowerCase().includes(query) && !value.some((t) => t.toLowerCase() === s.toLowerCase()))
-      .slice(0, 6)
-    : [];
+  const available = suggestions.filter((s) => !value.some((t) => t.toLowerCase() === s.toLowerCase()));
+  const matches = (query ? available.filter((s) => s.toLowerCase().includes(query)) : available).slice(0, 6);
 
   return (
     <div className="tag-input-wrap">

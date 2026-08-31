@@ -253,8 +253,10 @@ label {
    inside the Words card, so a border-top reads as "attached to" that row
    rather than a whole separate block. */
 .add-word-panel {
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--gridline);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 470px;
 }
 
 .add-word-panel h3 {
@@ -462,7 +464,7 @@ tfoot th {
 }
 
 .import-textarea {
-  min-height: 220px;
+  height: 200px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
 }
@@ -475,36 +477,77 @@ tfoot th {
   color: var(--text-secondary);
 }
 
-.import-table-wrap {
+/*
+ * Import review rows: one card per parsed word rather than a table row, so
+ * word/translation/definition/example each get the input's full width
+ * instead of being squeezed into narrow table columns (which forced
+ * horizontal scrolling and made the pasted text hard to read/edit).
+ */
+.import-rows-wrap {
   overflow-y: auto;
-  max-height: 46vh;
+  max-height: 54vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.1rem;
+}
+
+.import-row-card {
   border: 1px solid var(--gridline);
   border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.import-table-wrap table {
-  font-size: 0.85rem;
+.import-row-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.import-table-wrap th {
-  position: sticky;
-  top: 0;
-  background: var(--surface);
+.import-row-remove {
+  margin-left: auto;
+}
+
+.import-translation-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.import-translation-cell .import-cell-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-row-primary,
+.import-row-secondary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+@media (min-width: 480px) {
+  .import-row-primary,
+  .import-row-secondary {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .import-row-invalid {
   opacity: 0.6;
 }
 
-.import-row-duplicate td:not(:first-child) {
+.import-row-duplicate .import-cell-input {
   color: var(--muted);
 }
 
 .import-cell-input {
-  height: 30px;
-  padding: 0 8px;
-  font-size: 0.85rem;
-  white-space: normal;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 560px) {

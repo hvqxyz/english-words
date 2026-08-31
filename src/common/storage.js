@@ -3,8 +3,11 @@ import {
   appendWordRow,
   appendWordRows,
   putWordRow,
+  putWordRows,
   fetchCategories,
   appendCategoryRow,
+  fetchSessions,
+  appendSessionRow,
   deleteRows,
   clearAndWrite,
   ensureSpreadsheet,
@@ -97,6 +100,7 @@ function createTtlCache(fetchFn) {
 
 const wordsCache = createTtlCache(fetchWords);
 const categoriesCache = createTtlCache(fetchCategories);
+const sessionsCache = createTtlCache(fetchSessions);
 
 export async function getWords() {
   return wordsCache.get();
@@ -104,6 +108,10 @@ export async function getWords() {
 
 export async function getCategories() {
   return categoriesCache.get();
+}
+
+export async function getSessions() {
+  return sessionsCache.get();
 }
 
 export async function getSpreadsheetUrl(sheetName) {
@@ -171,6 +179,21 @@ export async function deleteCategory(row) {
 }
 
 /**
+ * Tags have no separate sheet — they only exist as free text on words — so
+ * "deleting" a tag means stripping it from every word that has it, in one
+ * batched write.
+ */
+export async function deleteTag(words, tag) {
+  const affected = words.filter((w) => (w.tags || []).includes(tag));
+  if (affected.length === 0) return;
+  await putWordRows(affected.map((w) => ({
+    row: w._row,
+    word: { ...w, tags: w.tags.filter((t) => t !== tag) },
+  })));
+  wordsCache.invalidate();
+}
+
+/**
  * Days until a word is due again in "Due only" practice, based on its
  * current correct-answer streak — see REVIEW_INTERVAL_DAYS.
  */
@@ -199,12 +222,25 @@ function shuffled(list) {
 }
 
 /**
- * Builds a shuffled practice session from `words`: only words due for review
- * when `onlyDue` is true, otherwise every word. `limit` (falsy = no cap)
- * trims the session to that many cards.
+ * Narrows `words` down to a practice pool: only words due for review when
+ * `onlyDue` is true (otherwise every word), further restricted to a single
+ * `category` and/or `tag` when given.
  */
-export function buildPracticeQueue(words, { onlyDue = true, limit = 0 } = {}) {
-  const pool = onlyDue ? dueWords(words) : words;
+export function practicePool(words, { onlyDue = true, category = '', tag = '' } = {}) {
+  let pool = onlyDue ? dueWords(words) : words;
+  if (category) pool = pool.filter((w) => w.category === category);
+  if (tag) pool = pool.filter((w) => (w.tags || []).includes(tag));
+  return pool;
+}
+
+/**
+ * Builds a shuffled practice session from `words`: only words due for review
+ * when `onlyDue` is true, otherwise every word, optionally restricted to a
+ * `category` and/or `tag`. `limit` (falsy = no cap) trims the session to that
+ * many cards.
+ */
+export function buildPracticeQueue(words, { onlyDue = true, category = '', tag = '', limit = 0 } = {}) {
+  const pool = practicePool(words, { onlyDue, category, tag });
   const queue = shuffled(pool);
   return limit ? queue.slice(0, limit) : queue;
 }
@@ -227,6 +263,24 @@ export async function recordReview(word, correct) {
   return { ...word, ...patch };
 }
 
+/**
+ * Logs one completed practice session (for the Stats page) — a single row
+ * per session, independent of the per-word review history recordReview
+ * keeps.
+ */
+export async function recordSession({ total, correct, onlyDue, category, tag }) {
+  await appendSessionRow({
+    date: todayKey(),
+    total,
+    correct,
+    onlyDue,
+    category: category || '',
+    tag: tag || '',
+    timestamp: new Date().toISOString(),
+  });
+  sessionsCache.invalidate();
+}
+
 /** Top-line counts for the Stats page. */
 export function summarizeWords(words, today = todayKey()) {
   const total = words.length;
@@ -234,6 +288,58 @@ export function summarizeWords(words, today = todayKey()) {
   const due = dueWords(words, today).length;
   const categories = new Set(words.map((w) => w.category).filter(Boolean)).size;
   return { total, learned, due, categories };
+}
+
+/** Top-line counts for the Stats page's "Practice sessions" section. */
+export function summarizeSessions(sessions) {
+  const totalSessions = sessions.length;
+  const totalReviews = sessions.reduce((sum, s) => sum + s.total, 0);
+  const totalCorrect = sessions.reduce((sum, s) => sum + s.correct, 0);
+  const avgAccuracy = totalReviews > 0 ? Math.round((totalCorrect / totalReviews) * 100) : 0;
+  return { totalSessions, totalReviews, avgAccuracy, streak: practiceStreak(sessions) };
+}
+
+/** Consecutive days (ending today or yesterday) with at least one session. */
+export function practiceStreak(sessions, today = todayKey()) {
+  const days = new Set(sessions.map((s) => s.date));
+  let cursor = days.has(today) ? today : shiftDateKey(today, -1);
+  if (!days.has(cursor)) return 0;
+  let streak = 0;
+  while (days.has(cursor)) {
+    streak += 1;
+    cursor = shiftDateKey(cursor, -1);
+  }
+  return streak;
+}
+
+/**
+ * Daily session points from the first logged session through today, one
+ * point per day — reviews-per-day and accuracy-per-day, for the Stats page
+ * chart. Returns [] when there are no sessions yet.
+ */
+export function sessionsOverTimePoints(sessions) {
+  if (sessions.length === 0) return [];
+  const today = todayKey();
+  const dates = sessions.map((s) => s.date).sort();
+  const endKey = dates[dates.length - 1] > today ? dates[dates.length - 1] : today;
+  const days = dateRangeInclusive(dates[0], endKey);
+
+  const byDate = new Map();
+  sessions.forEach((s) => {
+    const entry = byDate.get(s.date) || { total: 0, correct: 0 };
+    entry.total += s.total;
+    entry.correct += s.correct;
+    byDate.set(s.date, entry);
+  });
+
+  return days.map((date) => {
+    const entry = byDate.get(date);
+    return {
+      x: date,
+      reviews: entry ? entry.total : 0,
+      accuracy: entry && entry.total > 0 ? Math.round((entry.correct / entry.total) * 100) : null,
+    };
+  });
 }
 
 const UNCATEGORIZED_LABEL = 'Uncategorized';
@@ -255,6 +361,15 @@ export function getAllTags(words) {
   const set = new Set();
   words.forEach((w) => (w.tags || []).forEach((t) => set.add(t)));
   return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+/** Word counts per tag, most-used first — for the Categories/Tags page. */
+export function tagBreakdown(words) {
+  const counts = new Map();
+  words.forEach((w) => (w.tags || []).forEach((t) => counts.set(t, (counts.get(t) || 0) + 1)));
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
 }
 
 /**

@@ -70,29 +70,25 @@ export function WordsPage() {
         </button>
       </div>
 
-      <Card title="Add a word">
-        {activePanel === 'add' && (
-          <>
-            <AddWordPanel
-                words={words}
-                categories={categories}
-                allTags={allTags}
-                onClose={() => setActivePanel(null)}
-                onSaved={refresh}
-                onEditExisting={openEditForm}
-                onBulkImport={() => setActivePanel('import')}
-            />
-          </>
-        )}
-
-        {activePanel === 'import' && (
+      <Card>
+        {activePanel === 'add' ? (
+          <AddWordPanel
+              words={words}
+              categories={categories}
+              allTags={allTags}
+              onClose={() => setActivePanel(null)}
+              onSaved={refresh}
+              onEditExisting={openEditForm}
+              onBulkImport={() => setActivePanel('import')}
+          />
+        ) : (
           <BulkImportPanel
             categories={categories}
+            allTags={allTags}
             onClose={() => setActivePanel(null)}
             onSaved={refresh}
           />
         )}
-
       </Card>
 
       <WordsListSection

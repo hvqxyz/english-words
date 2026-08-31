@@ -114,12 +114,14 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  width: 70%;
 }
 
 .entry-list-value {
   min-width: 0;
+  width: 30%;
 
-  text-align: right;
+  text-align: left;
 
   font-size: 0.9rem;
   font-weight: 500;

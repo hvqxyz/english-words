@@ -53,7 +53,7 @@ export function SearchInput({
   const query = (value || '').trim().toLowerCase();
   const matches = query
     ? items.filter((item) => getLabel(item).toLowerCase().includes(query)).slice(0, maxResults)
-    : [];
+    : items.slice(0, maxResults);
 
   function selectItem(item) {
     onChange?.(getLabel(item));
@@ -95,14 +95,12 @@ export function SearchInput({
           setActiveIndex(-1);
           setOpen(true);
         }}
-        onFocus={() => {
-          if (value) setOpen(true);
-        }}
+        onFocus={() => setOpen(true)}
         // Delay so a mousedown on a result can run first (mousedown fires before blur).
         onBlur={() => setTimeout(() => setOpen(false), 100)}
         onKeyDown={handleKeyDown}
       />
-      {open && query && (
+      {open && (
         <ul className="search-input-results">
           {matches.length === 0 ? (
             <li className="search-input-empty">No matches</li>

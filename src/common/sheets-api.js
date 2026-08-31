@@ -9,12 +9,14 @@ const SPREADSHEET_MIME = 'application/vnd.google-apps.spreadsheet';
 
 const WORDS_SHEET = 'Words';
 const CATEGORIES_SHEET = 'Categories';
+const SESSIONS_SHEET = 'Sessions';
 
 const WORDS_HEADER = [
   'Word', 'Translation', 'Definition', 'Example', 'PartOfSpeech', 'Category',
   'Learned', 'TimesReviewed', 'CorrectStreak', 'LastReviewed', 'DateAdded', 'Tags',
 ];
 const CATEGORIES_HEADER = ['Name'];
+const SESSIONS_HEADER = ['Date', 'Total', 'Correct', 'OnlyDue', 'Category', 'Tag', 'Timestamp'];
 
 let spreadsheetId = localStorage.getItem(SPREADSHEET_ID_KEY);
 let sheetIds = null; // { Words: <numeric id>, Categories: <numeric id> }
@@ -57,6 +59,7 @@ async function findOrCreateSpreadsheet() {
       sheets: [
         { properties: { title: WORDS_SHEET } },
         { properties: { title: CATEGORIES_SHEET } },
+        { properties: { title: SESSIONS_SHEET } },
       ],
     }),
   });
@@ -77,6 +80,10 @@ async function findOrCreateSpreadsheet() {
   await apiFetch(`${spreadsheetId}/values/${CATEGORIES_SHEET}!A1:A1?valueInputOption=RAW`, {
     method: 'PUT',
     body: JSON.stringify({ values: [CATEGORIES_HEADER] }),
+  });
+  await apiFetch(`${spreadsheetId}/values/${SESSIONS_SHEET}!A1:G1?valueInputOption=RAW`, {
+    method: 'PUT',
+    body: JSON.stringify({ values: [SESSIONS_HEADER] }),
   });
 
   return spreadsheetId;
@@ -111,6 +118,24 @@ async function ensureCategoriesSheet() {
   });
 }
 
+/**
+ * Adds the Sessions tab to spreadsheets created before this feature existed.
+ */
+async function ensureSessionsSheet() {
+  if (sheetIds[SESSIONS_SHEET] !== undefined) return;
+
+  const result = await apiFetch(`${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: SESSIONS_SHEET } } }] }),
+  });
+  sheetIds[SESSIONS_SHEET] = result.replies[0].addSheet.properties.sheetId;
+
+  await apiFetch(`${spreadsheetId}/values/${SESSIONS_SHEET}!A1:G1?valueInputOption=RAW`, {
+    method: 'PUT',
+    body: JSON.stringify({ values: [SESSIONS_HEADER] }),
+  });
+}
+
 let wordsTagsHeaderEnsured = false;
 
 /**
@@ -135,6 +160,7 @@ export async function ensureSpreadsheet() {
     await findOrCreateSpreadsheet();
   }
   await ensureCategoriesSheet();
+  await ensureSessionsSheet();
   await ensureWordsTagsHeader();
   return spreadsheetId;
 }
@@ -201,6 +227,26 @@ export async function putWordRow(row, word) {
   });
 }
 
+/**
+ * Rewrites many (possibly non-adjacent) Words rows in a single API call —
+ * used when a change (e.g. removing a tag) touches every word that uses it.
+ * updates: [{ row, word }, ...]
+ */
+export async function putWordRows(updates) {
+  if (updates.length === 0) return;
+  const id = await ensureSpreadsheet();
+  await apiFetch(`${id}/values:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({
+      valueInputOption: 'RAW',
+      data: updates.map(({ row, word }) => ({
+        range: `${WORDS_SHEET}!A${row}:L${row}`,
+        values: [wordToRow(word)],
+      })),
+    }),
+  });
+}
+
 export async function fetchCategories() {
   const id = await ensureSpreadsheet();
   const result = await apiFetch(`${id}/values/${CATEGORIES_SHEET}!A2:A?valueRenderOption=UNFORMATTED_VALUE`);
@@ -214,6 +260,39 @@ export async function appendCategoryRow(name) {
   await apiFetch(`${id}/values/${CATEGORIES_SHEET}:append?valueInputOption=RAW`, {
     method: 'POST',
     body: JSON.stringify({ values: [[name]] }),
+  });
+}
+
+export async function fetchSessions() {
+  const id = await ensureSpreadsheet();
+  const result = await apiFetch(`${id}/values/${SESSIONS_SHEET}!A2:G?valueRenderOption=UNFORMATTED_VALUE`);
+  return (result.values || [])
+    .map((row) => {
+      const [date, total, correct, onlyDue, category, tag, timestamp] = row;
+      return {
+        date: date || '',
+        total: parseFloat(total) || 0,
+        correct: parseFloat(correct) || 0,
+        onlyDue: onlyDue === true || onlyDue === 'TRUE',
+        category: category || '',
+        tag: tag || '',
+        timestamp: timestamp || '',
+      };
+    })
+    .filter((s) => s.date);
+}
+
+export async function appendSessionRow(session) {
+  const id = await ensureSpreadsheet();
+  await apiFetch(`${id}/values/${SESSIONS_SHEET}:append?valueInputOption=RAW`, {
+    method: 'POST',
+    body: JSON.stringify({
+      values: [[
+        session.date, session.total, session.correct,
+        session.onlyDue ? 'TRUE' : 'FALSE', session.category ?? '', session.tag ?? '',
+        session.timestamp,
+      ]],
+    }),
   });
 }
 
@@ -261,6 +340,7 @@ export async function getSheetGid(sheetName) {
 export const SHEET_NAMES = {
   WORDS: WORDS_SHEET,
   CATEGORIES: CATEGORIES_SHEET,
+  SESSIONS: SESSIONS_SHEET,
 };
 
 export const WORDS_HEADER_COLUMNS = WORDS_HEADER.length;

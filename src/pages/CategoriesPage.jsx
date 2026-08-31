@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { getCategories, addCategory, deleteCategory, getWords } from '../common/storage.js';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getCategories, addCategory, deleteCategory, deleteTag, getWords, tagBreakdown } from '../common/storage.js';
 import { Card } from '../components/Card.jsx';
 import { Button } from '../components/buttons/Button.jsx';
 import { SearchInput } from '../components/inputs/SearchInput.jsx';
@@ -30,6 +30,8 @@ export function CategoriesPage() {
     return words.filter((w) => w.category === categoryName).length;
   }
 
+  const tags = useMemo(() => tagBreakdown(words), [words]);
+
   async function handleAdd(e) {
     e.preventDefault();
     const trimmed = name.trim();
@@ -49,7 +51,7 @@ export function CategoriesPage() {
     }
   }
 
-  async function handleDelete(category) {
+  async function handleDeleteCategory(category) {
     const count = wordCount(category.name);
     const warning = count > 0
       ? ` ${count} word${count === 1 ? '' : 's'} using it will keep the label but it won't show in the category filter anymore.`
@@ -63,35 +65,66 @@ export function CategoriesPage() {
     }
   }
 
-  return (
-    <Card title="Categories">
-      <p className="label">Group your words (e.g. Travel, Business, Idioms) to filter and browse them faster.</p>
-      <form className="inline-form" onSubmit={handleAdd}>
-        <SearchInput
-          searchable={false}
-          placeholder="New category name"
-          required
-          value={name}
-          onChange={setName}
-        />
-        <Button type="submit">Add category</Button>
-      </form>
-      {message.text && <p className={`message ${message.type}`.trim()} role="status">{message.text}</p>}
+  async function handleDeleteTag(tag) {
+    if (!window.confirm(`Remove tag "${tag.tag}"? It will be removed from ${tag.count} word${tag.count === 1 ? '' : 's'}.`)) return;
+    try {
+      await deleteTag(words, tag.tag);
+      await refresh();
+    } catch (err) {
+      setMessage({ text: `Couldn't save to Google Sheets: ${err.message}`, type: 'error' });
+    }
+  }
 
-      {categories.length === 0 ? (
-        <p className="message" role="status">No categories yet.</p>
-      ) : (
-        <EntryList
-          itemLabel="category"
-          items={categories.map((c) => ({
-            key: c.name,
-            label: c.name,
-            value: `${wordCount(c.name)} word${wordCount(c.name) === 1 ? '' : 's'}`,
-            removeLabel: `Remove ${c.name}`,
-            onRemove: () => handleDelete(c),
-          }))}
-        />
-      )}
-    </Card>
+  return (
+    <>
+      <Card title="Categories">
+        <p className="label">Group your words (e.g. Travel, Business, Idioms) to filter and browse them faster.</p>
+        <form className="inline-form" onSubmit={handleAdd}>
+          <SearchInput
+            searchable={false}
+            placeholder="New category name"
+            required
+            value={name}
+            onChange={setName}
+          />
+          <Button type="submit">Add category</Button>
+        </form>
+        {message.text && <p className={`message ${message.type}`.trim()} role="status">{message.text}</p>}
+
+        {categories.length === 0 ? (
+          <p className="message" role="status">No categories yet.</p>
+        ) : (
+          <EntryList
+            itemLabel="category"
+            items={categories.map((c) => ({
+              key: c.name,
+              label: c.name,
+              value: `${wordCount(c.name)} word${wordCount(c.name) === 1 ? '' : 's'}`,
+              removeLabel: `Remove ${c.name}`,
+              onRemove: () => handleDeleteCategory(c),
+            }))}
+          />
+        )}
+      </Card>
+
+      <Card title="Tags">
+        <p className="label">Tags are added straight on a word — this lists every tag in use so you can clean one up everywhere at once.</p>
+
+        {tags.length === 0 ? (
+          <p className="message" role="status">No tags yet — add some while editing a word.</p>
+        ) : (
+          <EntryList
+            itemLabel="tag"
+            items={tags.map((t) => ({
+              key: t.tag,
+              label: t.tag,
+              value: `${t.count} word${t.count === 1 ? '' : 's'}`,
+              removeLabel: `Remove ${t.tag}`,
+              onRemove: () => handleDeleteTag(t),
+            }))}
+          />
+        )}
+      </Card>
+    </>
   );
 }

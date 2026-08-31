@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Volume2, Ear } from 'lucide-react';
-import { getWords, dueWords, buildPracticeQueue, recordReview } from '../common/storage.js';
+import { getWords, getCategories, getAllTags, practicePool, buildPracticeQueue, recordReview, recordSession } from '../common/storage.js';
 import { speakWord, youglishUrl, canSpeak } from '../common/pronunciation.js';
 import { Card } from '../components/Card.jsx';
 import { Button } from '../components/buttons/Button.jsx';
 import { Checkbox } from '../components/inputs/Checkbox.jsx';
 import { Select } from '../components/inputs/Select.jsx';
+import { SearchInput } from '../components/inputs/SearchInput.jsx';
 
 function openYouglish(word) {
   window.open(youglishUrl(word), '_blank', 'noopener');
@@ -14,13 +15,18 @@ function openYouglish(word) {
 const SESSION_SIZE_OPTIONS = [
   { value: '10', label: '10 cards' },
   { value: '20', label: '20 cards' },
+  { value: '50', label: '50 cards' },
+  { value: '100', label: '100 cards' },
   { value: '0', label: 'All' },
 ];
 
 export function PracticePage() {
   const [words, setWords] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [onlyDue, setOnlyDue] = useState(true);
   const [sessionSize, setSessionSize] = useState('20');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [message, setMessage] = useState({ text: '', type: '' });
 
   const [phase, setPhase] = useState('setup'); // 'setup' | 'session' | 'summary'
@@ -32,7 +38,9 @@ export function PracticePage() {
 
   const refresh = useCallback(async () => {
     try {
-      setWords(await getWords());
+      const [w, c] = await Promise.all([getWords(), getCategories()]);
+      setWords(w);
+      setCategories(c);
       setMessage({ text: '', type: '' });
     } catch (err) {
       setMessage({ text: `Couldn't reach Google Sheets: ${err.message}`, type: 'error' });
@@ -43,11 +51,18 @@ export function PracticePage() {
     refresh();
   }, [refresh]);
 
-  const dueCount = useMemo(() => (words ? dueWords(words).length : 0), [words]);
+  const tags = useMemo(() => (words ? getAllTags(words) : []), [words]);
+
+  const dueCount = useMemo(() => (words ? practicePool(words, { onlyDue: true }).length : 0), [words]);
+
+  const poolCount = useMemo(
+    () => (words ? practicePool(words, { onlyDue, category: categoryFilter, tag: tagFilter }).length : 0),
+    [words, onlyDue, categoryFilter, tagFilter],
+  );
 
   function startSession() {
     const limit = parseInt(sessionSize, 10) || 0;
-    const built = buildPracticeQueue(words, { onlyDue, limit });
+    const built = buildPracticeQueue(words, { onlyDue, category: categoryFilter, tag: tagFilter, limit });
     if (built.length === 0) return;
     setQueue(built);
     setIndex(0);
@@ -65,6 +80,13 @@ export function PracticePage() {
         setIndex((i) => i + 1);
         setRevealed(false);
       } else {
+        await recordSession({
+          total: results.total + 1,
+          correct: results.correct + (correct ? 1 : 0),
+          onlyDue,
+          category: categoryFilter,
+          tag: tagFilter,
+        });
         await refresh();
         setPhase('summary');
       }
@@ -164,14 +186,44 @@ export function PracticePage() {
         />
       </div>
 
+      {categories.length > 0 && (
+        <div className="form-field">
+          <label htmlFor="category-filter-input">Category</label>
+          <Select
+            id="category-filter-input"
+            placeholder="All categories"
+            options={categories.map((c) => c.name)}
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+          />
+        </div>
+      )}
+
+      {tags.length > 0 && (
+        <div className="form-field">
+          <label htmlFor="tag-filter-input">Tag</label>
+          <SearchInput
+            id="tag-filter-input"
+            items={tags}
+            placeholder="All tags — search…"
+            value={tagFilter}
+            onChange={setTagFilter}
+          />
+        </div>
+      )}
+
       <Checkbox checked={onlyDue} onChange={setOnlyDue} label="Only words due for review" />
 
       {message.text && <p className={`message ${message.type}`.trim()} role="status">{message.text}</p>}
 
       {words.length === 0 ? (
         <p className="message" role="status">Add some words on the Words tab first.</p>
-      ) : onlyDue && dueCount === 0 ? (
-        <p className="message" role="status">All caught up — nothing is due right now. Uncheck "Only due" to practice anyway.</p>
+      ) : poolCount === 0 ? (
+        <p className="message" role="status">
+          {onlyDue
+            ? 'Nothing matches this filter and is due right now. Uncheck "Only due", or widen the category/tag filter.'
+            : 'No words match this filter.'}
+        </p>
       ) : (
         <Button onClick={startSession}>Start practice</Button>
       )}
